@@ -1,30 +1,20 @@
 "use client";
-
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { Stock } from "@/types/stock";
 
-interface Props {
-  stock: Stock;
-}
-
-export default function StockMiniChart({ stock }: Props) {
-  const last30 = stock.priceHistory.slice(-30);
+export default function StockMiniChart({ stock, height = 52 }: { stock: Stock; height?: number }) {
+  const data = stock.priceHistory.slice(-30);
   const isUp = stock.change >= 0;
+  const color = isUp ? "#4ade80" : "#fb7185";
 
   return (
-    <ResponsiveContainer width="100%" height={60}>
-      <LineChart data={last30}>
-        <Line
-          type="monotone"
-          dataKey="price"
-          stroke={isUp ? "#22c55e" : "#ef4444"}
-          strokeWidth={1.5}
-          dot={false}
-        />
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data}>
+        <Line type="monotone" dataKey="price" stroke={color} strokeWidth={1.5} dot={false} />
         <Tooltip
-          contentStyle={{ fontSize: 11, padding: "2px 8px", borderRadius: 6 }}
+          contentStyle={{ background: "#0d1f10", border: "1px solid rgba(110,231,183,0.2)", borderRadius: 8, fontSize: 11 }}
           formatter={(v) => [`$${Number(v).toFixed(2)}`, "Price"]}
-          labelFormatter={(label) => label}
+          labelFormatter={(l) => l}
         />
       </LineChart>
     </ResponsiveContainer>

@@ -17,7 +17,7 @@ export interface NewsItem {
   source: string;
   publishedAt: string;
   sentiment: "bullish" | "bearish" | "neutral";
-  sentimentScore: number; // -1 to 1
+  sentimentScore: number;
   url: string;
 }
 
@@ -48,4 +48,12 @@ export interface Stock {
   analystTarget: number;
   pe: number;
   eps: number;
+}
+
+export interface Position {
+  id: string;
+  symbol: string;
+  shares: number;
+  avgBuyPrice: number;
+  addedAt: string;
 }
