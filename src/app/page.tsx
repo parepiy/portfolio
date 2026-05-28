@@ -4,70 +4,74 @@ import { mockStocks } from "@/data/mockStocks";
 import SummaryView from "@/components/SummaryView";
 import StockDetail from "@/components/StockDetail";
 import PortfolioView from "@/components/PortfolioView";
-import BottomNav from "@/components/BottomNav";
-import { BarChart2 } from "lucide-react";
+import Sidebar from "@/components/Sidebar";
+import { BarChart2, Menu } from "lucide-react";
 
 type Tab = "summary" | "portfolio";
 
 export default function Home() {
-  const [tab, setTab] = useState<Tab>("summary");
-  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
-  const [prevTab, setPrevTab] = useState<Tab>("summary");
+  const [tab, setTab]                 = useState<Tab>("summary");
+  const [selectedSymbol, setSelected] = useState<string | null>(null);
+  const [prevTab, setPrevTab]         = useState<Tab>("summary");
+  const [drawerOpen, setDrawerOpen]   = useState(false);
 
-  const openStock = (symbol: string) => {
-    setPrevTab(tab);
-    setSelectedSymbol(symbol);
-  };
-
-  const closeStock = () => {
-    setSelectedSymbol(null);
-    setTab(prevTab);
-  };
+  const openStock = (symbol: string) => { setPrevTab(tab); setSelected(symbol); };
+  const closeStock = () => { setSelected(null); setTab(prevTab); };
 
   const selectedStock = selectedSymbol ? mockStocks.find((s) => s.symbol === selectedSymbol) : null;
 
   return (
-    <div className="flex flex-col" style={{ height: "100dvh", background: "#060e08" }}>
-      {/* Top header */}
+    <div className="flex flex-col" style={{ height: "100dvh", background: "var(--bg)" }}>
+      {/* Header */}
       <header
-        className="flex items-center justify-between px-4 py-3 shrink-0"
-        style={{ borderBottom: "1px solid rgba(110,231,183,0.12)", background: "rgba(6,14,8,0.95)" }}
+        className="flex items-center gap-3 px-4 py-3 shrink-0"
+        style={{ background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}
       >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #34d399, #6ee7b7)" }}
+        {/* Hamburger — mobile only */}
+        {!selectedSymbol && (
+          <button
+            className="md:hidden p-2 rounded-xl transition-colors"
+            style={{ color: "var(--mint)", background: "var(--mint-bg)" }}
+            onClick={() => setDrawerOpen(true)}
           >
-            <BarChart2 size={15} style={{ color: "#060e08" }} />
+            <Menu size={18} />
+          </button>
+        )}
+
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "#10b981" }}>
+            <BarChart2 size={15} style={{ color: "#fff" }} />
           </div>
           <div>
-            <div className="font-bold text-sm leading-none" style={{ color: "#ecfdf5" }}>StockWatch</div>
-            <div className="text-xs mt-0.5" style={{ color: "rgba(167,243,208,0.5)" }}>US Market</div>
+            <div className="font-bold text-sm leading-none" style={{ color: "var(--text)" }}>StockWatch</div>
+            <div className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>US Market · Demo Data</div>
           </div>
         </div>
 
-        {!selectedSymbol && (
-          <div className="flex gap-2 text-xs" style={{ color: "rgba(167,243,208,0.5)" }}>
-            <span>{new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-          </div>
-        )}
+        <div className="ml-auto text-xs" style={{ color: "var(--text-3)" }}>
+          {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden" style={{ paddingBottom: selectedSymbol ? 0 : 64 }}>
-        {selectedSymbol && selectedStock ? (
-          <div className="h-full overflow-hidden flex flex-col">
-            <StockDetail stock={selectedStock} onBack={closeStock} />
-          </div>
-        ) : tab === "summary" ? (
-          <SummaryView onSelect={openStock} />
-        ) : (
-          <PortfolioView onSelectStock={openStock} />
-        )}
-      </main>
+      {/* Body: sidebar + content */}
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar
+          active={selectedSymbol ? prevTab : tab}
+          onChange={(t) => { setTab(t); setSelected(null); }}
+          drawerOpen={drawerOpen}
+          onDrawerClose={() => setDrawerOpen(false)}
+        />
 
-      {/* Bottom nav — hidden when viewing stock detail */}
-      {!selectedSymbol && <BottomNav active={tab} onChange={setTab} />}
+        <main className="flex-1 overflow-hidden flex flex-col">
+          {selectedSymbol && selectedStock ? (
+            <StockDetail stock={selectedStock} onBack={closeStock} />
+          ) : tab === "summary" ? (
+            <SummaryView onSelect={openStock} />
+          ) : (
+            <PortfolioView onSelectStock={openStock} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
