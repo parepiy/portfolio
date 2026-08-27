@@ -1,5 +1,6 @@
 "use client";
 import { Stock } from "@/types/stock";
+import { fmtPrice } from "@/utils/format";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface Props {
@@ -43,14 +44,14 @@ export default function StockCard({ stock, isSelected, onClick }: Props) {
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs truncate max-w-[95px]" style={{ color: "var(--text-3)" }}>{stock.name}</span>
         <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
-          ${stock.currentPrice.toFixed(2)}
+          {fmtPrice(stock.currentPrice, stock.currency)}
         </span>
       </div>
 
       {/* Resistance */}
       {nearR && (
         <div className="flex items-center justify-between text-xs mb-1 px-2 py-1 rounded-lg" style={{ background: "#fee2e2" }}>
-          <span style={{ color: "var(--down)" }}>R&nbsp; ${nearR.level.toFixed(2)}</span>
+          <span style={{ color: "var(--down)" }}>R&nbsp; {fmtPrice(nearR.level, stock.currency)}</span>
           <span style={{ color: "var(--down)" }}>+{rDiff?.toFixed(1)}%</span>
         </div>
       )}
@@ -59,7 +60,7 @@ export default function StockCard({ stock, isSelected, onClick }: Props) {
       <div className="flex items-center gap-2 my-1 px-1">
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
         <span className="text-xs font-medium" style={{ color: "var(--mint)" }}>
-          ${stock.currentPrice.toFixed(2)}
+          {fmtPrice(stock.currentPrice, stock.currency)}
         </span>
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
@@ -67,7 +68,7 @@ export default function StockCard({ stock, isSelected, onClick }: Props) {
       {/* Support */}
       {nearS && (
         <div className="flex items-center justify-between text-xs mt-1 mb-2 px-2 py-1 rounded-lg" style={{ background: "#dcfce7" }}>
-          <span style={{ color: "var(--up)" }}>S&nbsp; ${nearS.level.toFixed(2)}</span>
+          <span style={{ color: "var(--up)" }}>S&nbsp; {fmtPrice(nearS.level, stock.currency)}</span>
           <span style={{ color: "var(--up)" }}>-{sDiff?.toFixed(1)}%</span>
         </div>
       )}

@@ -21,10 +21,15 @@ export interface NewsItem {
   url: string;
 }
 
+export type Market   = "US" | "SET";
+export type Currency = "USD" | "THB";
+
 export interface Stock {
   symbol: string;
   name: string;
   sector: string;
+  market: Market;
+  currency: Currency;
   currentPrice: number;
   previousClose: number;
   change: number;

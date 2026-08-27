@@ -1,19 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
 import { mockStocks } from "@/data/mockStocks";
-import { Stock } from "@/types/stock";
+import { Stock, Market } from "@/types/stock";
 import StockCard from "./StockCard";
 import { Plus, X, Search, TrendingUp, TrendingDown } from "lucide-react";
 
-const DEFAULT_WATCHLIST = ["AAPL", "NVDA", "TSLA", "MSFT", "META"];
+const DEFAULT_WATCHLIST = ["AAPL", "NVDA", "TSLA", "MSFT", "META", "PTT", "ADVANC", "CPALL"];
 
 interface Props { onSelect: (symbol: string) => void; }
+
+type MarketFilter = "ALL" | Market;
 
 export default function SummaryView({ onSelect }: Props) {
   const [watchlist, setWatchlist] = useState<string[]>(DEFAULT_WATCHLIST);
   const [loaded, setLoaded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>("ALL");
 
   // Load from localStorage once on mount
   useEffect(() => {
@@ -29,20 +32,25 @@ export default function SummaryView({ onSelect }: Props) {
     if (loaded) localStorage.setItem("stockwatch_watchlist", JSON.stringify(watchlist));
   }, [watchlist, loaded]);
 
-  const watched = watchlist
+  const allWatched = watchlist
     .map((s) => mockStocks.find((m) => m.symbol === s))
     .filter(Boolean) as Stock[];
 
-  const bullish  = watched.filter((s) => s.overallSentiment === "bullish").length;
-  const avgChg   = watched.length ? watched.reduce((sum, s) => sum + s.changePercent, 0) / watched.length : 0;
-  const gainers  = watched.filter((s) => s.change > 0).length;
+  const watched = marketFilter === "ALL"
+    ? allWatched
+    : allWatched.filter((s) => s.market === marketFilter);
+
+  const bullish  = allWatched.filter((s) => s.overallSentiment === "bullish").length;
+  const avgChg   = allWatched.length ? allWatched.reduce((sum, s) => sum + s.changePercent, 0) / allWatched.length : 0;
+  const gainers  = allWatched.filter((s) => s.change > 0).length;
 
   const available = mockStocks
     .filter((s) => !watchlist.includes(s.symbol))
     .filter((s) =>
       s.symbol.includes(query.toUpperCase()) ||
       s.name.toLowerCase().includes(query.toLowerCase())
-    );
+    )
+    .sort((a, b) => a.market.localeCompare(b.market));
 
   const add    = (sym: string) => { setWatchlist((p) => [...p, sym]); setAddOpen(false); setQuery(""); };
   const remove = (sym: string) => setWatchlist((p) => p.filter((s) => s !== sym));
@@ -59,8 +67,8 @@ export default function SummaryView({ onSelect }: Props) {
             color: avgChg >= 0 ? "var(--up)" : "var(--down)",
             bg:    avgChg >= 0 ? "var(--up-bg)" : "var(--down-bg)",
           },
-          { label: "Bullish",  value: `${bullish}/${watched.length}`,  icon: TrendingUp,   color: "var(--mint)", bg: "var(--mint-bg)" },
-          { label: "Gainers",  value: `${gainers}/${watched.length}`,  icon: TrendingUp,   color: "var(--up)",   bg: "var(--up-bg)"  },
+          { label: "Bullish",  value: `${bullish}/${allWatched.length}`,  icon: TrendingUp,   color: "var(--mint)", bg: "var(--mint-bg)" },
+          { label: "Gainers",  value: `${gainers}/${allWatched.length}`,  icon: TrendingUp,   color: "var(--up)",   bg: "var(--up-bg)"  },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="flex items-center gap-2 px-3 py-2 rounded-xl shrink-0" style={{ background: bg }}>
             <Icon size={13} style={{ color }} />
@@ -69,6 +77,22 @@ export default function SummaryView({ onSelect }: Props) {
               <div className="text-sm font-bold" style={{ color }}>{value}</div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* Market filter tabs */}
+      <div className="flex gap-1.5 px-4 pb-2 shrink-0">
+        {(["ALL", "US", "SET"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMarketFilter(m)}
+            className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors"
+            style={marketFilter === m
+              ? { background: "var(--mint)", color: "#fff" }
+              : { background: "var(--border)", color: "var(--text-2)" }}
+          >
+            {m === "ALL" ? "All" : m === "US" ? "🇺🇸 US" : "🇹🇭 SET"}
+          </button>
         ))}
       </div>
 
@@ -111,6 +135,7 @@ export default function SummaryView({ onSelect }: Props) {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold" style={{ color: "var(--text)" }}>{s.symbol}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "var(--border)", color: "var(--text-3)", fontSize: 9 }}>{s.market}</span>
                   <span className="text-xs text-dim">{s.name}</span>
                 </div>
                 <span className={`text-xs font-medium ${s.changePercent >= 0 ? "text-up" : "text-down"}`}>

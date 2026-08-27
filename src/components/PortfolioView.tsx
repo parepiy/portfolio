@@ -38,19 +38,19 @@ function AddForm({ onAdd, onClose }: { onAdd: (p: Omit<Position, "id" | "addedAt
             >
               <option value="">Select stock...</option>
               {mockStocks.map((s) => (
-                <option key={s.symbol} value={s.symbol}>{s.symbol} — {s.name}</option>
+                <option key={s.symbol} value={s.symbol}>{s.symbol} ({s.market}) — {s.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-xs text-dim mb-1.5 block">Number of Shares</label>
+            <label className="text-xs text-dim mb-1.5 block">Number of Shares / Units</label>
             <input type="number" min="0.0001" step="any" placeholder="e.g. 10"
               value={shares} onChange={(e) => setShares(e.target.value)} required
               className="input-mint w-full text-sm px-3 py-2.5"
             />
           </div>
           <div>
-            <label className="text-xs text-dim mb-1.5 block">Average Buy Price (USD)</label>
+            <label className="text-xs text-dim mb-1.5 block">Average Buy Price</label>
             <input type="number" min="0.01" step="any" placeholder="e.g. 195.00"
               value={avgPrice} onChange={(e) => setAvgPrice(e.target.value)} required
               className="input-mint w-full text-sm px-3 py-2.5"
@@ -119,15 +119,26 @@ export default function PortfolioView({ onSelectStock }: Props) {
     return [{ symbol, stock, shares: data.shares, avgBuy, currentValue, costBasis, pnl, pnlPct }];
   });
 
-  const totalValue = holdings.reduce((s, h) => s + h.currentValue, 0);
-  const totalCost  = holdings.reduce((s, h) => s + h.costBasis, 0);
-  const totalPnl   = totalValue - totalCost;
-  const totalPct   = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  const usdHoldings = holdings.filter((h) => h.stock.currency === "USD");
+  const thbHoldings = holdings.filter((h) => h.stock.currency === "THB");
 
-  const fmt = (n: number) =>
+  const calcTotals = (hs: Holding[]) => {
+    const val  = hs.reduce((s, h) => s + h.currentValue, 0);
+    const cost = hs.reduce((s, h) => s + h.costBasis, 0);
+    const pnl  = val - cost;
+    const pct  = cost > 0 ? (pnl / cost) * 100 : 0;
+    return { val, cost, pnl, pct };
+  };
+
+  const usd = calcTotals(usdHoldings);
+  const thb = calcTotals(thbHoldings);
+
+  const fmt = (n: number, sym = "$") =>
     n >= 1e6
-      ? `$${(n / 1e6).toFixed(2)}M`
-      : `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      ? `${sym}${(n / 1e6).toFixed(2)}M`
+      : `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const fmtH = (h: Holding, n: number) => fmt(n, h.stock.currency === "THB" ? "฿" : "$");
 
   if (!loaded) return null;
 
@@ -137,20 +148,38 @@ export default function PortfolioView({ onSelectStock }: Props) {
       <div className="px-4 pt-4 pb-2 shrink-0">
         {holdings.length > 0 ? (
           <div className="card p-4 mb-3" style={{ background: "var(--surface-2)" }}>
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-xs text-faint mb-1">Total Portfolio Value</div>
-                <div className="text-2xl font-bold" style={{ color: "var(--text)" }}>{fmt(totalValue)}</div>
-                <div className={`flex items-center gap-1 text-sm font-semibold mt-1 ${totalPnl >= 0 ? "text-up" : "text-down"}`}>
-                  {totalPnl >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                  {totalPnl >= 0 ? "+" : ""}{fmt(totalPnl)} ({totalPct >= 0 ? "+" : ""}{totalPct.toFixed(2)}%)
+            <div className="text-xs text-faint mb-2">{holdings.length} positions</div>
+            <div className="space-y-2">
+              {usdHoldings.length > 0 && (
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-bold" style={{ color: "var(--text-3)" }}>🇺🇸 USD</span>
+                    </div>
+                    <div className="text-xl font-bold" style={{ color: "var(--text)" }}>{fmt(usd.val, "$")}</div>
+                    <div className={`flex items-center gap-1 text-xs font-semibold mt-0.5 ${usd.pnl >= 0 ? "text-up" : "text-down"}`}>
+                      {usd.pnl >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                      {usd.pnl >= 0 ? "+" : ""}{fmt(usd.pnl, "$")} ({usd.pct >= 0 ? "+" : ""}{usd.pct.toFixed(2)}%)
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-faint">Cost {fmt(usd.cost, "$")}</div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-faint mb-1">Cost Basis</div>
-                <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{fmt(totalCost)}</div>
-                <div className="text-xs text-faint mt-1">{holdings.length} positions</div>
-              </div>
+              )}
+              {thbHoldings.length > 0 && (
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-xs font-bold" style={{ color: "var(--text-3)" }}>🇹🇭 THB</span>
+                    </div>
+                    <div className="text-xl font-bold" style={{ color: "var(--text)" }}>{fmt(thb.val, "฿")}</div>
+                    <div className={`flex items-center gap-1 text-xs font-semibold mt-0.5 ${thb.pnl >= 0 ? "text-up" : "text-down"}`}>
+                      {thb.pnl >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                      {thb.pnl >= 0 ? "+" : ""}{fmt(thb.pnl, "฿")} ({thb.pct >= 0 ? "+" : ""}{thb.pct.toFixed(2)}%)
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-faint">Cost {fmt(thb.cost, "฿")}</div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -183,17 +212,18 @@ export default function PortfolioView({ onSelectStock }: Props) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-base" style={{ color: "var(--text)" }}>{h.symbol}</span>
+                  <span className="text-xs px-1 py-0.5 rounded font-medium" style={{ background: "var(--border)", color: "var(--text-3)", fontSize: 9 }}>{h.stock.market}</span>
                   <span className="text-xs text-faint">{h.stock.name}</span>
                 </div>
                 <div className="text-xs text-dim mt-0.5">
-                  {h.shares} shares · avg ${h.avgBuy.toFixed(2)}
+                  {h.shares} shares · avg {fmtH(h, h.avgBuy)}
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
-                  <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{fmt(h.currentValue)}</div>
+                  <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>{fmtH(h, h.currentValue)}</div>
                   <div className={`text-xs font-semibold ${h.pnl >= 0 ? "text-up" : "text-down"}`}>
-                    {h.pnl >= 0 ? "+" : ""}{fmt(h.pnl)} ({h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(2)}%)
+                    {h.pnl >= 0 ? "+" : ""}{fmtH(h, h.pnl)} ({h.pnlPct >= 0 ? "+" : ""}{h.pnlPct.toFixed(2)}%)
                   </div>
                 </div>
                 <ChevronRight size={14} className="text-faint" />
@@ -203,8 +233,8 @@ export default function PortfolioView({ onSelectStock }: Props) {
             {/* Progress bar */}
             <div className="mb-3">
               <div className="flex justify-between text-xs text-faint mb-1">
-                <span>Avg Buy ${h.avgBuy.toFixed(2)}</span>
-                <span>Now ${h.stock.currentPrice.toFixed(2)}</span>
+                <span>Avg Buy {fmtH(h, h.avgBuy)}</span>
+                <span>Now {fmtH(h, h.stock.currentPrice)}</span>
               </div>
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
                 <div

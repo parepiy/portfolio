@@ -1,5 +1,6 @@
 "use client";
 import { Stock } from "@/types/stock";
+import { fmtPrice } from "@/utils/format";
 import PriceChart from "./PriceChart";
 import NewsCard from "./NewsCard";
 import { TrendingUp, TrendingDown, Minus, Target, Zap, ArrowLeft } from "lucide-react";
@@ -16,14 +17,14 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-function LevelRow({ label, level, cur, type }: { label: string; level: number; cur: number; type: "support"|"resistance" }) {
+function LevelRow({ label, level, cur, type, currencySymbol }: { label: string; level: number; cur: number; type: "support"|"resistance"; currencySymbol: string }) {
   const diff = ((cur - level) / level) * 100;
   const isSup = type === "support";
   return (
     <div className="flex items-center justify-between text-xs py-2 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
       <span className="text-dim">{label}</span>
       <div className="flex items-center gap-3">
-        <span className="font-medium" style={{ color: isSup ? "var(--up)" : "var(--down)" }}>${level.toFixed(2)}</span>
+        <span className="font-medium" style={{ color: isSup ? "var(--up)" : "var(--down)" }}>{currencySymbol}{level.toFixed(2)}</span>
         <span style={{ color: isSup ? (diff > 0 ? "var(--up)" : "var(--text-3)") : (diff < 0 ? "var(--down)" : "var(--text-3)") }}>
           {diff > 0 ? "+" : ""}{diff.toFixed(1)}%
         </span>
@@ -33,6 +34,7 @@ function LevelRow({ label, level, cur, type }: { label: string; level: number; c
 }
 
 function ZoneBanner({ stock }: { stock: Stock }) {
+  const sym = stock.currency === "THB" ? "฿" : "$";
   const p = stock.currentPrice;
   const inBuy   = p >= stock.buyZone.low  && p <= stock.buyZone.high;
   const inSell  = p >= stock.sellZone.low && p <= stock.sellZone.high;
@@ -56,8 +58,8 @@ function ZoneBanner({ stock }: { stock: Stock }) {
       </div>
       <p className="text-xs mb-3" style={{ color }}>{desc}</p>
       <div className="flex gap-5 text-xs" style={{ color }}>
-        <div><div className="opacity-60 mb-0.5">Buy Zone</div><div className="font-medium">${stock.buyZone.low} – ${stock.buyZone.high}</div></div>
-        <div><div className="opacity-60 mb-0.5">Sell Zone</div><div className="font-medium">${stock.sellZone.low} – ${stock.sellZone.high}</div></div>
+        <div><div className="opacity-60 mb-0.5">Buy Zone</div><div className="font-medium">{sym}{stock.buyZone.low} – {sym}{stock.buyZone.high}</div></div>
+        <div><div className="opacity-60 mb-0.5">Sell Zone</div><div className="font-medium">{sym}{stock.sellZone.low} – {sym}{stock.sellZone.high}</div></div>
       </div>
     </div>
   );
@@ -97,9 +99,11 @@ function SentimentMeter({ stock }: { stock: Stock }) {
 
 export default function StockDetail({ stock, onBack }: Props) {
   const isUp = stock.change >= 0;
+  const cur = stock.currency;
+  const sym = cur === "THB" ? "฿" : "$";
   const fromATH = ((stock.currentPrice - stock.ath) / stock.ath) * 100;
   const fromATL = ((stock.currentPrice - stock.atl) / stock.atl) * 100;
-  const fmtCap = (n: number) => n >= 1e12 ? `$${(n/1e12).toFixed(2)}T` : n >= 1e9 ? `$${(n/1e9).toFixed(1)}B` : `$${(n/1e6).toFixed(0)}M`;
+  const fmtCap = (n: number) => n >= 1e12 ? `${sym}${(n/1e12).toFixed(2)}T` : n >= 1e9 ? `${sym}${(n/1e9).toFixed(1)}B` : `${sym}${(n/1e6).toFixed(0)}M`;
   const fmtVol = (n: number) => n >= 1e6 ? `${(n/1e6).toFixed(1)}M` : `${(n/1e3).toFixed(0)}K`;
 
   return (
@@ -117,7 +121,7 @@ export default function StockDetail({ stock, onBack }: Props) {
               <span className="ml-auto text-xs px-2.5 py-1 rounded-lg text-dim" style={{ background: "var(--border)", whiteSpace: "nowrap" }}>{stock.sector}</span>
             </div>
             <div className="flex items-baseline gap-2 mt-0.5">
-              <span className="font-bold text-2xl" style={{ color: "var(--text)" }}>${stock.currentPrice.toFixed(2)}</span>
+              <span className="font-bold text-2xl" style={{ color: "var(--text)" }}>{fmtPrice(stock.currentPrice, cur)}</span>
               <span className={`text-sm font-semibold ${isUp ? "text-up" : "text-down"}`}>
                 {isUp ? "+" : ""}{stock.change.toFixed(2)} ({isUp ? "+" : ""}{stock.changePercent.toFixed(2)}%)
               </span>
@@ -132,14 +136,14 @@ export default function StockDetail({ stock, onBack }: Props) {
         <PriceChart stock={stock} />
 
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="ATH"       value={`$${stock.ath}`}          sub={`${fromATH.toFixed(1)}%`} />
-          <Stat label="ATL"       value={`$${stock.atl}`}          sub={`${fromATL > 999 ? ">999" : fromATL.toFixed(0)}%`} />
-          <Stat label="52W High"  value={`$${stock.week52High}`}   sub={`Low $${stock.week52Low}`} />
+          <Stat label="ATH"       value={fmtPrice(stock.ath, cur)}        sub={`${fromATH.toFixed(1)}%`} />
+          <Stat label="ATL"       value={fmtPrice(stock.atl, cur)}        sub={`${fromATL > 999 ? ">999" : fromATL.toFixed(0)}%`} />
+          <Stat label="52W High"  value={fmtPrice(stock.week52High, cur)} sub={`Low ${fmtPrice(stock.week52Low, cur)}`} />
           <Stat label="Mkt Cap"   value={fmtCap(stock.marketCap)} />
           <Stat label="Volume"    value={fmtVol(stock.volume)}     sub={`Avg ${fmtVol(stock.avgVolume)}`} />
-          <Stat label="P/E"       value={`${stock.pe}x`}           sub={`EPS $${stock.eps}`} />
-          <Stat label="Target"    value={`$${stock.analystTarget}`} sub={`${(((stock.analystTarget-stock.currentPrice)/stock.currentPrice)*100).toFixed(1)}% up`} />
-          <Stat label="Prev Close" value={`$${stock.previousClose}`} />
+          <Stat label="P/E"       value={`${stock.pe}x`}           sub={`EPS ${fmtPrice(stock.eps, cur)}`} />
+          <Stat label="Target"    value={fmtPrice(stock.analystTarget, cur)} sub={`${(((stock.analystTarget-stock.currentPrice)/stock.currentPrice)*100).toFixed(1)}% up`} />
+          <Stat label="Prev Close" value={fmtPrice(stock.previousClose, cur)} />
           <Stat label="ATH Date"  value={stock.athDate.slice(0,7)}  sub={`ATL ${stock.atlDate.slice(0,7)}`} />
         </div>
 
@@ -147,13 +151,13 @@ export default function StockDetail({ stock, onBack }: Props) {
           <div className="card p-4">
             <div className="text-sm font-semibold text-mint mb-3">Support Levels</div>
             {stock.supportLevels.map((s, i) => (
-              <LevelRow key={i} label={s.strength.charAt(0).toUpperCase() + s.strength.slice(1)} level={s.level} cur={stock.currentPrice} type="support" />
+              <LevelRow key={i} label={s.strength.charAt(0).toUpperCase() + s.strength.slice(1)} level={s.level} cur={stock.currentPrice} type="support" currencySymbol={sym} />
             ))}
           </div>
           <div className="card p-4">
             <div className="text-sm font-semibold text-mint mb-3">Resistance Levels</div>
             {stock.resistanceLevels.map((r, i) => (
-              <LevelRow key={i} label={r.strength.charAt(0).toUpperCase() + r.strength.slice(1)} level={r.level} cur={stock.currentPrice} type="resistance" />
+              <LevelRow key={i} label={r.strength.charAt(0).toUpperCase() + r.strength.slice(1)} level={r.level} cur={stock.currentPrice} type="resistance" currencySymbol={sym} />
             ))}
           </div>
         </div>
